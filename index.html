@@ -573,14 +573,11 @@
         let homeLocation = null; // Position principale sauvegardée
         let isAtHome = true; // Indique si on est à la position principale
         let autocompleteTimeout = null;
-        let cityTimezoneOffset = null; // Décalage horaire de la ville en secondes (null = heure locale)
+        let cityTimezoneOffset = new Date().getTimezoneOffset() * -60; // Fuseau horaire local par défaut (converti en secondes)
 
         // Obtenir la date/heure selon le fuseau horaire de la ville
         function getCityTime() {
             const now = new Date();
-            if (cityTimezoneOffset === null) {
-                return now; // Heure locale
-            }
             // Calculer l'heure UTC puis ajouter le décalage de la ville
             const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
             return new Date(utcTime + (cityTimezoneOffset * 1000));
@@ -666,6 +663,7 @@
                 
                 // Mettre à jour le fuseau horaire de la ville
                 cityTimezoneOffset = data.timezone;
+                console.log(`Ville: ${city}, Fuseau horaire: ${cityTimezoneOffset}s (UTC${cityTimezoneOffset >= 0 ? '+' : ''}${Math.round(cityTimezoneOffset/3600)})`);
                 
                 document.getElementById('temperature').textContent = `${temp}°`;
                 document.getElementById('cityName').textContent = city;
