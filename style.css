@@ -216,10 +216,10 @@ body {
 .center-section .clock-container .time-display .time-numbers {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: clamp(1.2rem, 3vw, 2rem);
+  gap: 8px;
+  font-size: clamp(2rem, 5vw, 3.5rem);
   font-weight: 300;
-  letter-spacing: 2px;
+  letter-spacing: 4px;
 }
 .center-section .clock-container .time-display .time-numbers .hours {
   color: #00A8FF;

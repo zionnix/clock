@@ -156,15 +156,28 @@
 
         .city-input-form {
             display: none;
+            flex-direction: column;
             gap: 10px;
             margin-top: 10px;
+            position: relative;
         }
 
         .city-input-form.active {
             display: flex;
         }
 
+        .city-input-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .city-input-wrapper {
+            position: relative;
+            flex: 1;
+        }
+
         .city-input {
+            width: 100%;
             padding: 10px 15px;
             background: rgba(20, 20, 20, 0.9);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -178,6 +191,44 @@
         .city-input:focus {
             border-color: #00FF87;
             box-shadow: 0 0 15px rgba(0, 255, 135, 0.2);
+        }
+
+        .autocomplete-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: none;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+
+        .autocomplete-list.active {
+            display: block;
+        }
+
+        .autocomplete-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .autocomplete-item:hover {
+            background: rgba(0, 168, 255, 0.2);
+            color: #00A8FF;
+        }
+
+        .autocomplete-item .country {
+            color: #888;
+            font-size: 0.75rem;
+            margin-left: 8px;
         }
 
         .submit-btn {
@@ -197,6 +248,31 @@
             background: #33ffaa;
             box-shadow: 0 0 20px rgba(0, 255, 135, 0.5);
             transform: scale(1.05);
+        }
+
+        .reset-location-btn {
+            display: none;
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: rgba(255, 51, 102, 0.2);
+            border: 1px solid #FF3366;
+            color: #FF3366;
+            font-family: 'Spaceline', 'Arial', sans-serif;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .reset-location-btn.visible {
+            display: block;
+        }
+
+        .reset-location-btn:hover {
+            background: rgba(255, 51, 102, 0.4);
+            box-shadow: 0 0 15px rgba(255, 51, 102, 0.3);
+            transform: translateY(-2px);
         }
 
         .center-section {
@@ -427,9 +503,15 @@
                 <div class="city-name" id="cityName">Chargement...</div>
                 <button class="change-city-btn" id="changeCityBtn">Changer de ville</button>
                 <form class="city-input-form" id="cityForm">
-                    <input type="text" class="city-input" id="cityInput" placeholder="Nom de la ville">
-                    <button type="submit" class="submit-btn">OK</button>
+                    <div class="city-input-row">
+                        <div class="city-input-wrapper">
+                            <input type="text" class="city-input" id="cityInput" placeholder="Nom de la ville" autocomplete="off">
+                            <div class="autocomplete-list" id="autocompleteList"></div>
+                        </div>
+                        <button type="submit" class="submit-btn">OK</button>
+                    </div>
                 </form>
+                <button class="reset-location-btn" id="resetLocationBtn">📍 Ma position</button>
             </div>
 
             <div class="center-section">
@@ -488,6 +570,9 @@
             `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}&lang=fr`;
 
         let currentCity = '';
+        let homeLocation = null; // Position principale sauvegardée
+        let isAtHome = true; // Indique si on est à la position principale
+        let autocompleteTimeout = null;
 
         // Mise à jour de l'heure
         function updateTime() {
@@ -560,7 +645,7 @@
         }
 
         // Récupération de la météo
-        async function fetchWeather(lat, lon) {
+        async function fetchWeather(lat, lon, isHome = false) {
             try {
                 const response = await fetch(WEATHER_URL(lat, lon));
                 const data = await response.json();
@@ -571,24 +656,98 @@
                 document.getElementById('cityName').textContent = city;
                 currentCity = city;
                 updateTitle(city);
+
+                // Mettre à jour l'état du bouton reset
+                if (isHome) {
+                    isAtHome = true;
+                    document.getElementById('resetLocationBtn').classList.remove('visible');
+                } else {
+                    isAtHome = false;
+                    document.getElementById('resetLocationBtn').classList.add('visible');
+                }
             } catch (error) {
                 console.error('Erreur météo:', error);
             }
         }
 
         // Recherche de ville
-        async function searchCity(cityName) {
+        async function searchCity(cityName, isHome = false) {
             try {
                 const response = await fetch(GEO_URL(cityName));
                 const data = await response.json();
                 if (data.length > 0) {
                     const { lat, lon } = data[0];
-                    fetchWeather(lat, lon);
+                    fetchWeather(lat, lon, isHome);
                     document.getElementById('cityForm').classList.remove('active');
                     document.getElementById('cityInput').value = '';
+                    hideAutocomplete();
                 }
             } catch (error) {
                 console.error('Erreur recherche:', error);
+            }
+        }
+
+        // Autocomplétion des villes
+        async function fetchCitySuggestions(query) {
+            if (query.length < 2) {
+                hideAutocomplete();
+                return;
+            }
+            try {
+                const response = await fetch(GEO_URL(query, 5));
+                const data = await response.json();
+                displayAutocomplete(data);
+            } catch (error) {
+                console.error('Erreur autocomplétion:', error);
+            }
+        }
+
+        function displayAutocomplete(cities) {
+            const list = document.getElementById('autocompleteList');
+            list.innerHTML = '';
+            
+            if (cities.length === 0) {
+                hideAutocomplete();
+                return;
+            }
+
+            cities.forEach(city => {
+                const item = document.createElement('div');
+                item.className = 'autocomplete-item';
+                item.innerHTML = `${city.name}<span class="country">${city.country}${city.state ? ', ' + city.state : ''}</span>`;
+                item.addEventListener('click', () => {
+                    fetchWeather(city.lat, city.lon, false);
+                    document.getElementById('cityForm').classList.remove('active');
+                    document.getElementById('cityInput').value = '';
+                    hideAutocomplete();
+                });
+                list.appendChild(item);
+            });
+
+            list.classList.add('active');
+        }
+
+        function hideAutocomplete() {
+            document.getElementById('autocompleteList').classList.remove('active');
+        }
+
+        // Retour à la position principale
+        function resetToHomeLocation() {
+            if (homeLocation) {
+                fetchWeather(homeLocation.lat, homeLocation.lon, true);
+            } else {
+                // Réessayer la géolocalisation
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            homeLocation = { lat: position.coords.latitude, lon: position.coords.longitude };
+                            fetchWeather(homeLocation.lat, homeLocation.lon, true);
+                        },
+                        (error) => {
+                            console.error('Erreur géolocalisation:', error);
+                        }
+                    );
+                }
             }
         }
 
@@ -596,29 +755,50 @@
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    fetchWeather(position.coords.latitude, position.coords.longitude);
+                    homeLocation = { lat: position.coords.latitude, lon: position.coords.longitude };
+                    fetchWeather(position.coords.latitude, position.coords.longitude, true);
                 },
                 (error) => {
                     console.error('Erreur géolocalisation:', error);
-                    searchCity('Paris');
+                    searchCity('Paris', true);
                 }
             );
         } else {
-            searchCity('Paris');
+            searchCity('Paris', true);
         }
 
         // Événements
         document.getElementById('changeCityBtn').addEventListener('click', () => {
             document.getElementById('cityForm').classList.toggle('active');
+            hideAutocomplete();
         });
 
         document.getElementById('cityForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const cityName = document.getElementById('cityInput').value.trim();
             if (cityName) {
-                searchCity(cityName);
+                searchCity(cityName, false);
             }
         });
+
+        // Autocomplétion en temps réel
+        document.getElementById('cityInput').addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            clearTimeout(autocompleteTimeout);
+            autocompleteTimeout = setTimeout(() => {
+                fetchCitySuggestions(query);
+            }, 300); // Délai pour éviter trop de requêtes
+        });
+
+        // Fermer l'autocomplétion si on clique ailleurs
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.city-input-wrapper')) {
+                hideAutocomplete();
+            }
+        });
+
+        // Bouton retour à la position principale
+        document.getElementById('resetLocationBtn').addEventListener('click', resetToHomeLocation);
 
         // Mise à jour continue
         setInterval(updateTime, 1000);
