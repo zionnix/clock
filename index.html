@@ -573,10 +573,22 @@
         let homeLocation = null; // Position principale sauvegardée
         let isAtHome = true; // Indique si on est à la position principale
         let autocompleteTimeout = null;
+        let cityTimezoneOffset = null; // Décalage horaire de la ville en secondes (null = heure locale)
+
+        // Obtenir la date/heure selon le fuseau horaire de la ville
+        function getCityTime() {
+            const now = new Date();
+            if (cityTimezoneOffset === null) {
+                return now; // Heure locale
+            }
+            // Calculer l'heure UTC puis ajouter le décalage de la ville
+            const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+            return new Date(utcTime + (cityTimezoneOffset * 1000));
+        }
 
         // Mise à jour de l'heure
         function updateTime() {
-            const now = new Date();
+            const now = getCityTime();
             const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
             const seconds = String(now.getSeconds()).padStart(2, '0');
@@ -597,7 +609,7 @@
 
         // Mise à jour de la date
         function updateDate() {
-            const now = new Date();
+            const now = getCityTime();
             const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 
                            'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
             
@@ -652,10 +664,17 @@
                 const temp = Math.round(data.main.temp);
                 const city = data.name;
                 
+                // Mettre à jour le fuseau horaire de la ville
+                cityTimezoneOffset = data.timezone;
+                
                 document.getElementById('temperature').textContent = `${temp}°`;
                 document.getElementById('cityName').textContent = city;
                 currentCity = city;
                 updateTitle(city);
+                
+                // Mettre à jour l'heure et la date immédiatement
+                updateTime();
+                updateDate();
 
                 // Mettre à jour l'état du bouton reset
                 if (isHome) {
