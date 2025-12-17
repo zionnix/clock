@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Clock - Horloge Intelligente</title>
+    <link href="https://fonts.cdnfonts.com/css/spaceline" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Spaceline', 'Arial', sans-serif;
+            background: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #0a0a0a 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .smart-clock {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .smart-clock::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(255, 51, 102, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(0, 255, 135, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(0, 168, 255, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 20px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .title {
+            font-size: clamp(1.5rem, 4vw, 3rem);
+            font-weight: 300;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #00A8FF, #00FF87);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: titleGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes titleGlow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.3); }
+        }
+
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 40px;
+            padding: 20px 40px;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+            align-items: center;
+        }
+
+        .left-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .temperature-circle {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: rgba(26, 26, 26, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .temperature-circle::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF3366, #00A8FF);
+            opacity: 0.3;
+            z-index: -1;
+            filter: blur(10px);
+        }
+
+        .temp-value {
+            font-size: 3.5rem;
+            font-weight: 300;
+            background: linear-gradient(135deg, #FF3366, #00A8FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .city-name {
+            font-size: 1.5rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .change-city-btn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: rgba(20, 20, 20, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            font-family: 'Spaceline', 'Arial', sans-serif;
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .change-city-btn:hover {
+            background: rgba(30, 30, 30, 0.9);
+            border-color: #00A8FF;
+            box-shadow: 0 0 20px rgba(0, 168, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .city-input-form {
+            display: none;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .city-input-form.active {
+            display: flex;
+        }
+
+        .city-input {
+            padding: 10px 15px;
+            background: rgba(20, 20, 20, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            font-family: 'Spaceline', 'Arial', sans-serif;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            outline: none;
+        }
+
+        .city-input:focus {
+            border-color: #00FF87;
+            box-shadow: 0 0 15px rgba(0, 255, 135, 0.2);
+        }
+
+        .submit-btn {
+            padding: 10px 20px;
+            background: #00FF87;
+            border: none;
+            color: #0a0a0a;
+            font-family: 'Spaceline', 'Arial', sans-serif;
+            font-size: 0.9rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            background: #33ffaa;
+            box-shadow: 0 0 20px rgba(0, 255, 135, 0.5);
+            transform: scale(1.05);
+        }
+
+        .center-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .clock-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 1;
+        }
+
+        .clock-svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 30px rgba(0, 168, 255, 0.2));
+        }
+
+        .arc-animation {
+            transition: stroke-dasharray 0.3s ease-out;
+        }
+
+        .time-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .time-numbers {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 300;
+            letter-spacing: 4px;
+        }
+
+        .hours {
+            color: #00A8FF;
+            text-shadow: 0 0 20px rgba(0, 168, 255, 0.5);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .minutes {
+            color: #00FF87;
+            text-shadow: 0 0 20px rgba(0, 255, 135, 0.5);
+            animation: pulse 2s ease-in-out infinite 0.1s;
+        }
+
+        .seconds {
+            color: #FF3366;
+            text-shadow: 0 0 20px rgba(255, 51, 102, 0.5);
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        .separator {
+            color: rgba(255, 255, 255, 0.5);
+            animation: blink 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0.3; }
+        }
+
+        .right-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .date-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            background: rgba(26, 26, 26, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 30px 40px;
+            border-radius: 10px;
+        }
+
+        .day {
+            font-size: 4rem;
+            font-weight: 300;
+            color: #00A8FF;
+            line-height: 1;
+        }
+
+        .month {
+            font-size: 1.3rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .year {
+            font-size: 1rem;
+            letter-spacing: 2px;
+            color: #888888;
+        }
+
+        .week-display {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .day-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .day-initial {
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            font-weight: 300;
+        }
+
+        .day-indicator {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(60, 60, 60, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .day-indicator.completed {
+            background: rgba(0, 255, 135, 0.2);
+            border-color: #00FF87;
+            box-shadow: 0 0 20px rgba(0, 255, 135, 0.3);
+        }
+
+        .day-indicator.completed svg {
+            animation: checkmark 0.5s ease-out;
+        }
+
+        @keyframes checkmark {
+            0% { transform: scale(0) rotate(-45deg); }
+            50% { transform: scale(1.2) rotate(0deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        .footer {
+            padding: 30px 20px;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer p {
+            font-size: 0.9rem;
+            color: #888888;
+            letter-spacing: 1px;
+            margin: 5px 0;
+        }
+
+        .footer a {
+            color: #00A8FF;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .footer a:hover {
+            color: #00FF87;
+            text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
+        }
+
+        .footer-link {
+            margin: 0 10px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 60px;
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .title {
+                font-size: 1.2rem;
+                letter-spacing: 3px;
+            }
+            .temperature-circle {
+                width: 140px;
+                height: 140px;
+            }
+            .temp-value {
+                font-size: 2.5rem;
+            }
+            .time-numbers {
+                font-size: 2rem;
+                gap: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="smart-clock">
+        <header class="header">
+            <h1 class="title" id="pageTitle">HEURE DANS LA VILLE DE CHARGEMENT...</h1>
+        </header>
+
+        <main class="main-content">
+            <div class="left-section">
+                <div class="temperature-circle">
+                    <span class="temp-value" id="temperature">--°</span>
+                </div>
+                <div class="city-name" id="cityName">Chargement...</div>
+                <button class="change-city-btn" id="changeCityBtn">Changer de ville</button>
+                <form class="city-input-form" id="cityForm">
+                    <input type="text" class="city-input" id="cityInput" placeholder="Nom de la ville">
+                    <button type="submit" class="submit-btn">OK</button>
+                </form>
+            </div>
+
+            <div class="center-section">
+                <div class="clock-container">
+                    <svg class="clock-svg" viewBox="0 0 200 200">
+                        <circle cx="100" cy="100" r="85" fill="none" stroke="rgba(100, 100, 100, 0.2)" stroke-width="8"/>
+                        <circle id="hoursArc" cx="100" cy="100" r="85" fill="none" stroke="#00A8FF" stroke-width="8" 
+                                stroke-dasharray="0 534.07" stroke-linecap="round" transform="rotate(-90 100 100)" class="arc-animation"/>
+                        
+                        <circle cx="100" cy="100" r="70" fill="none" stroke="rgba(100, 100, 100, 0.2)" stroke-width="8"/>
+                        <circle id="minutesArc" cx="100" cy="100" r="70" fill="none" stroke="#00FF87" stroke-width="8" 
+                                stroke-dasharray="0 439.82" stroke-linecap="round" transform="rotate(-90 100 100)" class="arc-animation"/>
+                        
+                        <circle cx="100" cy="100" r="55" fill="none" stroke="rgba(100, 100, 100, 0.2)" stroke-width="8"/>
+                        <circle id="secondsArc" cx="100" cy="100" r="55" fill="none" stroke="#FF3366" stroke-width="8" 
+                                stroke-dasharray="0 345.58" stroke-linecap="round" transform="rotate(-90 100 100)" class="arc-animation"/>
+                    </svg>
+
+                    <div class="time-display">
+                        <div class="time-numbers">
+                            <span class="hours" id="hours">00</span>
+                            <span class="separator">:</span>
+                            <span class="minutes" id="minutes">00</span>
+                            <span class="separator">:</span>
+                            <span class="seconds" id="seconds">00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-section">
+                <div class="date-display">
+                    <span class="day" id="dateDay">1</span>
+                    <span class="month" id="dateMonth">janvier</span>
+                    <span class="year" id="dateYear">2024</span>
+                </div>
+                <div class="week-display" id="weekDisplay"></div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>Police "Spaceline" de <a href="https://fontmeme.com" target="_blank" rel="noopener noreferrer">FontMeme.com</a></p>
+            <p class="creator">
+                Créé par [Votre Nom] | 
+                <a href="#" class="footer-link">Projet 1</a> | 
+                <a href="#" class="footer-link">Projet 2</a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        const API_KEY = '840f2e7255bcf146931fd21cbbbe7b97';
+        const GEO_URL = (q, limit = 1) => 
+            `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(q)}&limit=${limit}&appid=${API_KEY}`;
+        const WEATHER_URL = (lat, lon) =>
+            `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}&lang=fr`;
+
+        let currentCity = '';
+
+        // Mise à jour de l'heure
+        function updateTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+
+            document.getElementById('hours').textContent = hours;
+            document.getElementById('minutes').textContent = minutes;
+            document.getElementById('seconds').textContent = seconds;
+
+            // Mise à jour des arcs
+            const secondsPercent = (now.getSeconds() / 60) * 100;
+            const minutesPercent = (now.getMinutes() / 60) * 100;
+            const hoursPercent = ((now.getHours() % 12) / 12) * 100 + (now.getMinutes() / 60) * (100 / 12);
+
+            document.getElementById('secondsArc').setAttribute('stroke-dasharray', `${(secondsPercent / 100) * 345.58} 345.58`);
+            document.getElementById('minutesArc').setAttribute('stroke-dasharray', `${(minutesPercent / 100) * 439.82} 439.82`);
+            document.getElementById('hoursArc').setAttribute('stroke-dasharray', `${(hoursPercent / 100) * 534.07} 534.07`);
+        }
+
+        // Mise à jour de la date
+        function updateDate() {
+            const now = new Date();
+            const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 
+                           'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+            
+            document.getElementById('dateDay').textContent = now.getDate();
+            document.getElementById('dateMonth').textContent = months[now.getMonth()];
+            document.getElementById('dateYear').textContent = now.getFullYear();
+
+            // Jours de la semaine
+            const daysOfWeek = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+            const currentDayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
+            const weekDisplay = document.getElementById('weekDisplay');
+            weekDisplay.innerHTML = '';
+
+            daysOfWeek.forEach((day, index) => {
+                const dayItem = document.createElement('div');
+                dayItem.className = 'day-item';
+                
+                const dayInitial = document.createElement('span');
+                dayInitial.className = 'day-initial';
+                dayInitial.textContent = day;
+                
+                const dayIndicator = document.createElement('div');
+                dayIndicator.className = 'day-indicator';
+                if (index <= currentDayIndex) {
+                    dayIndicator.classList.add('completed');
+                    dayIndicator.innerHTML = `
+                        <svg width="16" height="16" viewBox="0 0 16 16">
+                            <path d="M3 8l3 3 7-7" fill="none" stroke="#00FF87" stroke-width="2" 
+                                  stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    `;
+                }
+                
+                dayItem.appendChild(dayInitial);
+                dayItem.appendChild(dayIndicator);
+                weekDisplay.appendChild(dayItem);
+            });
+        }
+
+        // Mise à jour du titre
+        function updateTitle(city) {
+            const vowels = ['a', 'e', 'i', 'o', 'u', 'y', 'A', 'E', 'I', 'O', 'U', 'Y'];
+            const preposition = city && vowels.includes(city[0]) ? "D'" : 'DE ';
+            document.getElementById('pageTitle').textContent = `HEURE DANS LA VILLE ${preposition}${city.toUpperCase()}`;
+        }
+
+        // Récupération de la météo
+        async function fetchWeather(lat, lon) {
+            try {
+                const response = await fetch(WEATHER_URL(lat, lon));
+                const data = await response.json();
+                const temp = Math.round(data.main.temp);
+                const city = data.name;
+                
+                document.getElementById('temperature').textContent = `${temp}°`;
+                document.getElementById('cityName').textContent = city;
+                currentCity = city;
+                updateTitle(city);
+            } catch (error) {
+                console.error('Erreur météo:', error);
+            }
+        }
+
+        // Recherche de ville
+        async function searchCity(cityName) {
+            try {
+                const response = await fetch(GEO_URL(cityName));
+                const data = await response.json();
+                if (data.length > 0) {
+                    const { lat, lon } = data[0];
+                    fetchWeather(lat, lon);
+                    document.getElementById('cityForm').classList.remove('active');
+                    document.getElementById('cityInput').value = '';
+                }
+            } catch (error) {
+                console.error('Erreur recherche:', error);
+            }
+        }
+
+        // Géolocalisation
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    fetchWeather(position.coords.latitude, position.coords.longitude);
+                },
+                (error) => {
+                    console.error('Erreur géolocalisation:', error);
+                    searchCity('Paris');
+                }
+            );
+        } else {
+            searchCity('Paris');
+        }
+
+        // Événements
+        document.getElementById('changeCityBtn').addEventListener('click', () => {
+            document.getElementById('cityForm').classList.toggle('active');
+        });
+
+        document.getElementById('cityForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const cityName = document.getElementById('cityInput').value.trim();
+            if (cityName) {
+                searchCity(cityName);
+            }
+        });
+
+        // Mise à jour continue
+        setInterval(updateTime, 1000);
+        updateTime();
+        updateDate();
+        setInterval(updateDate, 60000);
+    </script>
+</body>
+</html>
