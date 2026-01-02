@@ -218,9 +218,6 @@ body {
   align-items: center;
   font-size: 3rem;
 }
-.center-section .clock-container .time-display .time-numbers > * {
-  margin: 0 -5px;
-}
 .center-section .clock-container .time-display .time-numbers .hours {
   color: #00A8FF;
   text-shadow: 0 0 20px rgba(0, 168, 255, 0.5);
