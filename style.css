@@ -254,7 +254,6 @@ body {
   display: flex;
   align-items: center;
   font-size: 3rem;
-  gap: 8px;
 }
 .center-section .clock-container .time-display .time-numbers .hours {
   color: #00A8FF;
