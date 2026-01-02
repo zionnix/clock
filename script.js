@@ -1,0 +1,259 @@
+const API_KEY = '840f2e7255bcf146931fd21cbbbe7b97';
+const GEO_URL = (q, limit = 1) => 
+    `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(q)}&limit=${limit}&appid=${API_KEY}`;
+const WEATHER_URL = (lat, lon) =>
+    `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}&lang=fr`;
+
+let currentCity = '';
+let homeLocation = null; // Position principale sauvegardée
+let isAtHome = true; // Indique si on est à la position principale
+let autocompleteTimeout = null;
+let cityTimezoneOffset = new Date().getTimezoneOffset() * -60; // Fuseau horaire local par défaut (converti en secondes)
+
+// Obtenir la date/heure selon le fuseau horaire de la ville
+function getCityTime() {
+    const now = new Date();
+    // Calculer l'heure UTC puis ajouter le décalage de la ville
+    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+    return new Date(utcTime + (cityTimezoneOffset * 1000));
+}
+
+// Mise à jour de l'heure
+function updateTime() {
+    const now = getCityTime();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+
+    document.getElementById('hours').textContent = hours;
+    document.getElementById('minutes').textContent = minutes;
+    document.getElementById('seconds').textContent = seconds;
+
+    // Mise à jour des arcs
+    const secondsPercent = (now.getSeconds() / 60) * 100;
+    const minutesPercent = (now.getMinutes() / 60) * 100;
+    const hoursPercent = ((now.getHours() % 12) / 12) * 100 + (now.getMinutes() / 60) * (100 / 12);
+
+    document.getElementById('secondsArc').setAttribute('stroke-dasharray', `${(secondsPercent / 100) * 345.58} 345.58`);
+    document.getElementById('minutesArc').setAttribute('stroke-dasharray', `${(minutesPercent / 100) * 439.82} 439.82`);
+    document.getElementById('hoursArc').setAttribute('stroke-dasharray', `${(hoursPercent / 100) * 534.07} 534.07`);
+}
+
+// Mise à jour de la date
+function updateDate() {
+    const now = getCityTime();
+    const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 
+                   'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    
+    document.getElementById('dateDay').textContent = now.getDate();
+    document.getElementById('dateMonth').textContent = months[now.getMonth()];
+    document.getElementById('dateYear').textContent = now.getFullYear();
+
+    // Jours de la semaine
+    const daysOfWeek = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+    const currentDayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
+    const weekDisplay = document.getElementById('weekDisplay');
+    weekDisplay.innerHTML = '';
+
+    daysOfWeek.forEach((day, index) => {
+        const dayItem = document.createElement('div');
+        dayItem.className = 'day-item';
+        
+        const dayInitial = document.createElement('span');
+        dayInitial.className = 'day-initial';
+        dayInitial.textContent = day;
+        
+        const dayIndicator = document.createElement('div');
+        dayIndicator.className = 'day-indicator';
+        if (index <= currentDayIndex) {
+            dayIndicator.classList.add('completed');
+            dayIndicator.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 16 16">
+                    <path d="M3 8l3 3 7-7" fill="none" stroke="#00FF87" stroke-width="2" 
+                          stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            `;
+        }
+        
+        dayItem.appendChild(dayInitial);
+        dayItem.appendChild(dayIndicator);
+        weekDisplay.appendChild(dayItem);
+    });
+}
+
+// Mise à jour du titre
+function updateTitle(city) {
+    const vowels = ['a', 'e', 'i', 'o', 'u', 'y', 'A', 'E', 'I', 'O', 'U', 'Y'];
+    const preposition = city && vowels.includes(city[0]) ? "D'" : 'DE ';
+    document.getElementById('pageTitle').textContent = `HEURE DANS LA VILLE ${preposition}${city.toUpperCase()}`;
+}
+
+// Récupération de la météo
+async function fetchWeather(lat, lon, isHome = false) {
+    try {
+        const response = await fetch(WEATHER_URL(lat, lon));
+        const data = await response.json();
+        const temp = Math.round(data.main.temp);
+        const city = data.name;
+        
+        // Mettre à jour le fuseau horaire de la ville
+        cityTimezoneOffset = data.timezone;
+        console.log(`Ville: ${city}, Fuseau horaire: ${cityTimezoneOffset}s (UTC${cityTimezoneOffset >= 0 ? '+' : ''}${Math.round(cityTimezoneOffset/3600)})`);
+        
+        document.getElementById('temperature').textContent = `${temp}°`;
+        document.getElementById('cityName').textContent = city;
+        currentCity = city;
+        updateTitle(city);
+        
+        // Mettre à jour l'heure et la date immédiatement
+        updateTime();
+        updateDate();
+
+        // Mettre à jour l'état du bouton reset
+        if (isHome) {
+            isAtHome = true;
+            document.getElementById('resetLocationBtn').classList.remove('visible');
+        } else {
+            isAtHome = false;
+            document.getElementById('resetLocationBtn').classList.add('visible');
+        }
+    } catch (error) {
+        console.error('Erreur météo:', error);
+    }
+}
+
+// Recherche de ville
+async function searchCity(cityName, isHome = false) {
+    try {
+        const response = await fetch(GEO_URL(cityName));
+        const data = await response.json();
+        if (data.length > 0) {
+            const { lat, lon } = data[0];
+            fetchWeather(lat, lon, isHome);
+            document.getElementById('cityForm').classList.remove('active');
+            document.getElementById('cityInput').value = '';
+            hideAutocomplete();
+        }
+    } catch (error) {
+        console.error('Erreur recherche:', error);
+    }
+}
+
+// Autocomplétion des villes
+async function fetchCitySuggestions(query) {
+    if (query.length < 2) {
+        hideAutocomplete();
+        return;
+    }
+    try {
+        const response = await fetch(GEO_URL(query, 5));
+        const data = await response.json();
+        displayAutocomplete(data);
+    } catch (error) {
+        console.error('Erreur autocomplétion:', error);
+    }
+}
+
+function displayAutocomplete(cities) {
+    const list = document.getElementById('autocompleteList');
+    list.innerHTML = '';
+    
+    if (cities.length === 0) {
+        hideAutocomplete();
+        return;
+    }
+
+    cities.forEach(city => {
+        const item = document.createElement('div');
+        item.className = 'autocomplete-item';
+        item.innerHTML = `${city.name}<span class="country">${city.country}${city.state ? ', ' + city.state : ''}</span>`;
+        item.addEventListener('click', () => {
+            fetchWeather(city.lat, city.lon, false);
+            document.getElementById('cityForm').classList.remove('active');
+            document.getElementById('cityInput').value = '';
+            hideAutocomplete();
+        });
+        list.appendChild(item);
+    });
+
+    list.classList.add('active');
+}
+
+function hideAutocomplete() {
+    document.getElementById('autocompleteList').classList.remove('active');
+}
+
+// Retour à la position principale
+function resetToHomeLocation() {
+    if (homeLocation) {
+        fetchWeather(homeLocation.lat, homeLocation.lon, true);
+    } else {
+        // Réessayer la géolocalisation
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    homeLocation = { lat: position.coords.latitude, lon: position.coords.longitude };
+                    fetchWeather(homeLocation.lat, homeLocation.lon, true);
+                },
+                (error) => {
+                    console.error('Erreur géolocalisation:', error);
+                }
+            );
+        }
+    }
+}
+
+// Géolocalisation
+if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            homeLocation = { lat: position.coords.latitude, lon: position.coords.longitude };
+            fetchWeather(position.coords.latitude, position.coords.longitude, true);
+        },
+        (error) => {
+            console.error('Erreur géolocalisation:', error);
+            searchCity('Paris', true);
+        }
+    );
+} else {
+    searchCity('Paris', true);
+}
+
+// Événements
+document.getElementById('changeCityBtn').addEventListener('click', () => {
+    document.getElementById('cityForm').classList.toggle('active');
+    hideAutocomplete();
+});
+
+document.getElementById('cityForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const cityName = document.getElementById('cityInput').value.trim();
+    if (cityName) {
+        searchCity(cityName, false);
+    }
+});
+
+// Autocomplétion en temps réel
+document.getElementById('cityInput').addEventListener('input', (e) => {
+    const query = e.target.value.trim();
+    clearTimeout(autocompleteTimeout);
+    autocompleteTimeout = setTimeout(() => {
+        fetchCitySuggestions(query);
+    }, 300); // Délai pour éviter trop de requêtes
+});
+
+// Fermer l'autocomplétion si on clique ailleurs
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.city-input-wrapper')) {
+        hideAutocomplete();
+    }
+});
+
+// Bouton retour à la position principale
+document.getElementById('resetLocationBtn').addEventListener('click', resetToHomeLocation);
+
+// Mise à jour continue
+setInterval(updateTime, 1000);
+updateTime();
+updateDate();
+setInterval(updateDate, 60000);
