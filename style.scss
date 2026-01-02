@@ -177,9 +177,27 @@ body {
   }
   
   .city-input-form {
-    display: flex;
+    display: none;
+    flex-direction: column;
     gap: 10px;
     margin-top: 10px;
+    position: relative;
+    
+    &.active {
+      display: flex;
+    }
+    
+    .city-input-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .city-input-wrapper {
+      position: relative;
+      flex: 1;
+    }
     
     .city-input {
       padding: 10px 15px;
@@ -219,6 +237,31 @@ body {
         box-shadow: 0 0 20px rgba(0, 255, 135, 0.5);
         transform: scale(1.05);
       }
+    }
+  }
+  
+  .reset-location-btn {
+    display: none;
+    margin: 10px auto 0;
+    padding: 10px 20px;
+    background: rgba(255, 51, 102, 0.2);
+    border: 1px solid $accent-red;
+    color: $accent-red;
+    font-family: 'Spaceline', 'Arial', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    
+    &.visible {
+      display: block;
+    }
+    
+    &:hover {
+      background: rgba(255, 51, 102, 0.4);
+      box-shadow: 0 0 15px rgba(255, 51, 102, 0.3);
+      transform: translateY(-2px);
     }
   }
 }
