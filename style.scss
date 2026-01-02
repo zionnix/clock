@@ -307,11 +307,7 @@ body {
         display: flex;
         align-items: center;
         font-size: 3rem;
-        
-        // Force le rapprochement des éléments flex (heures, séparateur, minutes...)
-        & > * {
-          margin: 0 -5px;
-        }
+        gap: 8px;
         
         .hours {
           color: $accent-blue;

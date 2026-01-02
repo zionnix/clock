@@ -254,9 +254,7 @@ body {
   display: flex;
   align-items: center;
   font-size: 3rem;
-}
-.center-section .clock-container .time-display .time-numbers > * {
-  margin: 0 -5px;
+  gap: 8px;
 }
 .center-section .clock-container .time-display .time-numbers .hours {
   color: #00A8FF;
