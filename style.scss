@@ -267,6 +267,11 @@ body {
         font-weight: 300;
         letter-spacing: -4px;
         
+        // Force le rapprochement des éléments flex (heures, séparateur, minutes...)
+        & > * {
+          margin: 0 -5px;
+        }
+        
         .hours {
           color: $accent-blue;
           text-shadow: 0 0 20px rgba(0, 168, 255, 0.5);
@@ -471,7 +476,7 @@ body {
   
   .center-section .clock-container .time-display .time-numbers {
     font-size: 2rem;
-    gap: 4px;
+    gap: 0;
   }
   
   .right-section .date-display {
